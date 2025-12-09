@@ -2,6 +2,11 @@
 
 ASP.NET Core Web API for downloading and storing images from URLs locally.
 
+# Used Technology 
+> .NET 6 (as mentioned in requirement doc)
+
+> Postman collection for making the API requests
+
 ## API Endpoints
 
 ### 1. POST `/Images`
