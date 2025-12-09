@@ -6,13 +6,13 @@ public static class FileHelper
     {
         return contentType.ToLower() switch
         {
-            "image/jpeg" => ".jpg",
+            "image/jpg" or "image/jpeg" => ".jpg",
             "image/png" => ".png",
             "image/gif" => ".gif",
             "image/bmp" => ".bmp",
             "image/tiff" => ".tiff",
             "image/webp" => ".webp",
-            _ => string.Empty,
+            _ => "ignore",
         };
     }
 

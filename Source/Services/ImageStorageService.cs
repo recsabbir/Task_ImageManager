@@ -27,14 +27,17 @@ public class ImageStorageService : IImageStorageService
     ///<inheritdoc/>
     public async Task<ResponseDownload> DownloadAndStoreImagesAsync(RequestDownload request)
     {
-        if (request.ImageUrls == null)
+        if (request.ImageUrls.IsNullOrEmpty())
             return new ResponseDownload
             {
                 Success = false,
                 Message = "No image URLs supplied."
             };
 
-        var imageDownloadProcessTracker = new ConcurrentDictionary<string, (bool IsSuccess, string MessageOrName)>();
+        //Status
+        
+        var imageDownloadProcessTracker = 
+            new ConcurrentDictionary<string, (DownloadProcessStatus Status, string MessageOrName)>(); 
 
         var imagesFolder = Path.Combine(_env.WebRootPath, _imagesFolderName);
         Directory.CreateDirectory(imagesFolder);//Create Folder if not exists
@@ -56,27 +59,34 @@ public class ImageStorageService : IImageStorageService
                     if (!Uri.TryCreate(url, UriKind.Absolute, out var uri) ||
                         (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
                     {
-                        imageDownloadProcessTracker[url] = (IsSuccess: false, MessageOrName: "Invalid URL.");
+                        imageDownloadProcessTracker[url] = (Status: DownloadProcessStatus.InvalidUrl, MessageOrName: "Invalid URL.");
                         return;
                     }
 
-                    var fileName = await DownloadAndSaveImageAsync(url, imagesFolder);
-                    imageDownloadProcessTracker[url] = (IsSuccess: true, MessageOrName: fileName);
+                    imageDownloadProcessTracker[url] = await DownloadAndSaveImageAsync(url, imagesFolder);
                 }
                 catch (Exception ex)
                 {
                     _logger.LogError(ex, "Error downloading image from URL: {Url}", url);
-                    imageDownloadProcessTracker[url] = (IsSuccess: false, MessageOrName: $"FAILED: {ex.Message}");
+                    imageDownloadProcessTracker[url] = (Status: DownloadProcessStatus.Failed, MessageOrName: $"FAILED: {ex.Message}");
                 }
             });
 
+        var successfulUrls = imageDownloadProcessTracker
+                                .Where(x => x.Value.Status.Equals(DownloadProcessStatus.Success))
+                                .ToDictionary(x => x.Key, x => x.Value.MessageOrName);
+
         return PrepareMessage(
-            successCount: imageDownloadProcessTracker.Count(x=>x.Value.IsSuccess),
-            failureCount: imageDownloadProcessTracker.Count(x => !x.Value.IsSuccess),
+            successCount: successfulUrls.Count,
+            failureCount: distinctUrls.Count - successfulUrls.Count,
             duplicateCount : request.ImageUrls.Count() - distinctUrls.Count,
-            urlAndNames : imageDownloadProcessTracker
-                                .Where(x=>x.Value.IsSuccess)
-                                .ToDictionary(x => x.Key, x => x.Value.MessageOrName)
+            urlAndNames : successfulUrls,
+            invalidUrls : imageDownloadProcessTracker
+                                    .Where(x=>x.Value.Status.Equals(DownloadProcessStatus.InvalidUrl))
+                                    .Select(x=>x.Key),
+            invalidFileTypeUrls : imageDownloadProcessTracker
+                                    .Where(x => x.Value.Status.Equals(DownloadProcessStatus.InvalidFileType))
+                                    .Select(x => x.Key)
         );
     }
 
@@ -117,7 +127,7 @@ public class ImageStorageService : IImageStorageService
 
     #region Private Methods
 
-    private async Task<string> DownloadAndSaveImageAsync(string imageUrl, string folder)
+    private async Task<(DownloadProcessStatus, string)> DownloadAndSaveImageAsync(string imageUrl, string folder)
     {
         using var client = _httpClientFactory.CreateClient();
 
@@ -128,7 +138,7 @@ public class ImageStorageService : IImageStorageService
         var ext = FileHelper.GetFileExtensionFromContentType(response.Content.Headers.ContentType?.MediaType ?? "");
 
         if (ext.Equals("ignore"))
-            return "Not a valid image URL.";
+            return (DownloadProcessStatus.InvalidFileType,"Invalid image URL.");
 
         var fileName = Guid.NewGuid().ToString();
         var filePath = Path.Combine(folder, $"{fileName}{ext}");
@@ -138,41 +148,66 @@ public class ImageStorageService : IImageStorageService
 
         await networkStream.CopyToAsync(fileStream);
 
-        return fileName;
+        return (DownloadProcessStatus.Success, fileName);
     }
 
     private ResponseDownload PrepareMessage(
-        int successCount, 
-        int failureCount, 
-        int duplicateCount, 
-        IDictionary<string, string> urlAndNames)
+    int successCount,
+    int failureCount,
+    int duplicateCount,
+    IDictionary<string, string> urlAndNames,
+    IEnumerable<string> invalidUrls,
+    IEnumerable<string> invalidFileTypeUrls)
     {
-        var total = successCount + failureCount + duplicateCount;
-
         var response = new ResponseDownload
         {
-            Success = successCount > 0, // success only if at least 1 image downloaded
+            Success = successCount > 0,
             UrlAndNames = urlAndNames
         };
 
         #region Building Message
-        var partOfMessage = new List<string>();
+        var parts = new List<string>();
 
         if (successCount > 0)
-            partOfMessage.Add($"{successCount} downloaded successfully");
+            parts.Add($"{successCount} downloaded successfully");
 
         if (failureCount > 0)
-            partOfMessage.Add($"{failureCount} failed");
+            parts.Add($"{failureCount} failed");
 
         if (duplicateCount > 0)
-            partOfMessage.Add($"{duplicateCount} duplicate URL(s) ignored");
+            parts.Add($"{duplicateCount} duplicate URL(s) ignored");
 
-        response.Message = string.Join(", ", partOfMessage) + ".";
+        // Add base summary
+        response.Message = string.Join(", ", parts) + ".";
 
+        // Add invalid URLs
+        if (invalidUrls.IsNotNullOrEmpty())
+        {
+            response.Message += 
+                $" {invalidUrls.Count()} Invalid URL(s): [ " +
+                string.Join(", ", invalidUrls) + " ].";
+        }
+
+        // Add unsupported file type URLs
+        if (invalidFileTypeUrls.IsNotNullOrEmpty())
+        {
+            response.Message +=
+                $" {invalidFileTypeUrls.Count()} Unsupported file type URL(s): [ " +
+                string.Join(" , ", invalidFileTypeUrls) + " ]." ;
+        }
         #endregion
 
         return response;
     }
 
+
     #endregion
+
+    private enum DownloadProcessStatus
+    {
+        Success = 1,
+        InvalidUrl = 2,
+        InvalidFileType = 3,
+        Failed = 4
+    }
 }
