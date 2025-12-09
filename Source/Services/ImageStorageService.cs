@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using ImageDownloader.Models;
 using ImageDownloader.Services.Contracts;
+using ImageDownloader.Utilities;
 
 namespace ImageDownloader.Services;
 
@@ -96,7 +97,12 @@ public class ImageStorageService : IImageStorageService
         try
         {
             var bytes = await File.ReadAllBytesAsync(path);
-            return (true, Convert.ToBase64String(bytes));
+            var base64String = Convert.ToBase64String(bytes);
+            var mimeType = FileHelper.GetMimeTypeFromExtension(Path.GetExtension(path));
+
+            // Return full data URI
+            string dataUri = $"data:{mimeType};base64,{base64String}";
+            return (true, dataUri);
         }
         catch (Exception ex)
         {
@@ -114,7 +120,7 @@ public class ImageStorageService : IImageStorageService
         response.EnsureSuccessStatusCode();
 
         // Determine file extension based on content-type
-        var ext = GetFileExtensionFromContentType(response.Content.Headers.ContentType?.MediaType ?? "");
+        var ext = FileHelper.GetFileExtensionFromContentType(response.Content.Headers.ContentType?.MediaType ?? "");
 
         if (ext.Equals("ignore"))
             return "Not a valid image URL.";
@@ -128,21 +134,6 @@ public class ImageStorageService : IImageStorageService
         await networkStream.CopyToAsync(fileStream);
 
         return fileName;
-    }
-
-    private string GetFileExtensionFromContentType(string contentType)
-    {
-        return contentType.ToLower() switch
-        {
-            "image/jpg" => ".jpg",
-            "image/jpeg" => ".jpeg",
-            "image/png" => ".png",
-            "image/gif" => ".gif",
-            "image/bmp" => ".bmp",
-            "image/tiff" => ".tiff",
-            "image/webp" => ".webp",
-            _ => "ignore"
-        };
     }
 
     private ResponseDownload PrepareMessage(
