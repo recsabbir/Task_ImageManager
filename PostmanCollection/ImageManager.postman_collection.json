@@ -1,0 +1,84 @@
+{
+	"info": {
+		"_postman_id": "881e7019-6ffc-4759-a434-0f9c4186a313",
+		"name": "ImageManager",
+		"schema": "https://schema.getpostman.com/json/collection/v2.0.0/collection.json",
+		"_exporter_id": "15873915",
+		"_collection_link": "https://winter-rocket-999148.postman.co/workspace/Sabbir~d027579f-facb-44fe-bca2-4c0637689cc9/collection/15873915-881e7019-6ffc-4759-a434-0f9c4186a313?action=share&source=collection_link&creator=15873915"
+	},
+	"item": [
+		{
+			"name": "Save Images",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n    \"imageUrls\": [\r\n        \"https://plus.unsplash.com/premium_photo-1683865776032-07bf70b0add1?q=80&w=1932&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D\",\r\n        \"https://images.unsplash.com/photo-1461749280684-dccba630e2f6?q=80&w=2069&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D\",\r\n        \"https://images.unsplash.com/photo-1517404215738-15263e9f9178?q=80&w=1170&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D\",\r\n        \"https://images.unsplash.com/photo-1741704751367-e276706e530d?q=80&w=1332&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D\",\r\n        \"https://images.unsplash.com/photo-1747435446516-71eb8c66bd47?q=80&w=1332&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D\",\r\n        \"https://fastly.picsum.photos/id/1041/200/300.jpg?hmac=l4FIMky2hFQgqx0kNCHmVhtfQJz_CUcyK_0Q-UiQwAI\",\r\n        \"https://fastly.picsum.photos/id/985/200/200.jpg?hmac=-oC6YfQiGmm3Fyl5kVCag3-Z0VUHT0pRLIziGH1c4KU\",\r\n        \"https://fastly.picsum.photos/id/237/200/300.jpg?hmac=TmmQSbShHz9CdQm0NkEjx1Dyh_Y984R9LpNrpvH2D_U\",\r\n        \"https://fastly.picsum.photos/id/866/200/300.jpg?hmac=rcadCENKh4rD6MAp6V_ma-AyWv641M4iiOpe1RyFHeI\",\r\n        \"https://fastly.picsum.photos/id/607/200/300.jpg?grayscale&hmac=kV7JeqhuSM1D5Qz-NZspSojsI72lFK4yc3sCOBV6igA\",\r\n        \"https://fastly.picsum.photos/id/428/200/300.jpg?blur=5&hmac=goqjTVCUWj_FRaacnrgfqep26u1rURK3hT_iQF0EHRw\",\r\n        \"https://fastly.picsum.photos/id/43/200/300.jpg?blur=2&hmac=8dwAQZE7Y7QeSTqKZpM1pOz1FU4G4zuERzLidERaRoo\",\r\n        \"https://fastly.picsum.photos/id/870/200/300.jpg?blur=2&grayscale&hmac=ujRymp644uYVjdKJM7kyLDSsrqNSMVRPnGU99cKl6Vs\",\r\n        \"https://fastly.picsum.photos/id/151/200/300.jpg?hmac=xUZfjy1YzUhANZsaGjxLKdz9qmhZYsYGpEoht7SCyng\",\r\n        \"https://fastly.picsum.photos/id/137/200/300.webp?hmac=u0Aoehmr0yrPVhOKcJpzIsGbbiK1x-oC6Q-z6v_6j30\"\r\n    ],\r\n    \"maxDownloadAtOnce\": 5\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": "{{baseUrl}}/Images"
+			},
+			"response": []
+		},
+		{
+			"name": "Get Image",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{baseUrl}}/Images/get-image-by-name/:image_name",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"Images",
+						"get-image-by-name",
+						":image_name"
+					],
+					"variable": [
+						{
+							"key": "image_name",
+							"value": ""
+						}
+					]
+				}
+			},
+			"response": []
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"packages": {},
+				"requests": {},
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"packages": {},
+				"requests": {},
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": ""
+		}
+	]
+}
