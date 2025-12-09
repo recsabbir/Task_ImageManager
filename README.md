@@ -23,8 +23,8 @@ Downloads multiple images from provided URLs and stores them locally on the serv
   "success": true,
   "message": "2 downloaded successfully.",
   "urlAndNames": {
-    "https://example.com/image1.jpg": "stored_filename_1.jpg",
-    "https://example.com/image2.png": "stored_filename_2.png"
+    "https://example.com/image1.jpg": "f442799c-cb39-4541-bb92-2e4160c949fb",
+    "https://example.com/image2.png": "bf15213d-6f63-465d-b577-6fb2eaa30726"
   }
 }
 ```
