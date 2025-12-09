@@ -8,14 +8,11 @@ namespace ImageDownloader.Controllers;
 [Route("[controller]")]
 public class ImagesController : ControllerBase
 {
-    private readonly ILogger<ImagesController> _logger;
     private readonly IImageStorageService _imageStorageService;
 
     public ImagesController(
-        ILogger<ImagesController> logger, 
         IImageStorageService imageStorageService)
     {
-        _logger = logger;
         _imageStorageService = imageStorageService;
     }
 

@@ -7,15 +7,18 @@ namespace ImageDownloader.Services;
 
 public class ImageStorageService : IImageStorageService
 {
+    private readonly ILogger<ImageStorageService> _logger;
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly IWebHostEnvironment _env;
     private readonly string _imagesFolderName;
 
     public ImageStorageService(
+        ILogger<ImageStorageService> logger,
         IConfiguration config, 
         IWebHostEnvironment env,
         IHttpClientFactory httpClientFactory)
     {
+        _logger = logger;
         _imagesFolderName = config["ImageDirectoryName"];
         _env = env;
         _httpClientFactory = httpClientFactory;
@@ -62,6 +65,7 @@ public class ImageStorageService : IImageStorageService
                 }
                 catch (Exception ex)
                 {
+                    _logger.LogError(ex, "Error downloading image from URL: {Url}", url);
                     imageDownloadProcessTracker[url] = (IsSuccess: false, MessageOrName: $"FAILED: {ex.Message}");
                 }
             });
@@ -106,6 +110,7 @@ public class ImageStorageService : IImageStorageService
         }
         catch (Exception ex)
         {
+            _logger.LogError(ex, "Error reading image file: {FilePath}", path);
             return (false, $"Error reading image: {ex.Message}");
         }
     }
