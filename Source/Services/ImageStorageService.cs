@@ -2,6 +2,7 @@ using System.Collections.Concurrent;
 using ImageDownloader.Models;
 using ImageDownloader.Services.Contracts;
 using ImageDownloader.Utilities;
+using Polly;
 
 namespace ImageDownloader.Services;
 
@@ -11,6 +12,7 @@ public class ImageStorageService : IImageStorageService
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly IWebHostEnvironment _env;
     private readonly string _imagesFolderName;
+    private readonly ResiliencePipeline<HttpResponseMessage> _imageFetchRetryPolicy;
 
     public ImageStorageService(
         ILogger<ImageStorageService> logger,
@@ -22,6 +24,28 @@ public class ImageStorageService : IImageStorageService
         _imagesFolderName = config["ImageDirectoryName"];
         _env = env;
         _httpClientFactory = httpClientFactory;
+        
+        int.TryParse(config["RetryAttemptCount"], out int retryAttemptCount);
+
+        _imageFetchRetryPolicy = new ResiliencePipelineBuilder<HttpResponseMessage>()
+                .AddRetry(new Polly.Retry.RetryStrategyOptions<HttpResponseMessage>
+                {
+                    ShouldHandle = new PredicateBuilder<HttpResponseMessage>()
+                                .Handle<TimeoutException>()
+                                .Handle<HttpRequestException>()
+                                .HandleResult(response => !response.IsSuccessStatusCode),
+
+                    MaxRetryAttempts = retryAttemptCount,
+                    Delay = TimeSpan.FromMilliseconds(500),
+                    BackoffType = DelayBackoffType.Exponential,
+                    OnRetry = args =>
+                    {
+                        _logger.LogWarning("Retry attempt {AttemptNumber} for operation. Exception: {Exception}",
+                            args.AttemptNumber, args.Outcome.Exception?.Message);
+                        return ValueTask.CompletedTask;
+                    }
+                })
+                .Build();
     }
 
     ///<inheritdoc/>
@@ -45,6 +69,8 @@ public class ImageStorageService : IImageStorageService
         //Considering same URL only once
         var distinctUrls = request.ImageUrls.Distinct().ToList();
 
+        using var client = _httpClientFactory.CreateClient();
+
         await Parallel.ForEachAsync(
             source: distinctUrls, 
             parallelOptions: new ParallelOptions
@@ -63,7 +89,7 @@ public class ImageStorageService : IImageStorageService
                         return;
                     }
 
-                    imageDownloadProcessTracker[url] = await DownloadAndSaveImageAsync(url, imagesFolder);
+                    imageDownloadProcessTracker[url] = await DownloadAndSaveImageAsync(client, url, imagesFolder);
                 }
                 catch (Exception ex)
                 {
@@ -127,11 +153,14 @@ public class ImageStorageService : IImageStorageService
 
     #region Private Methods
 
-    private async Task<(DownloadProcessStatus, string)> DownloadAndSaveImageAsync(string imageUrl, string folder)
+    private async Task<(DownloadProcessStatus, string)> DownloadAndSaveImageAsync(HttpClient client, string imageUrl, string folder)
     {
-        using var client = _httpClientFactory.CreateClient();
+        using var response = await _imageFetchRetryPolicy.ExecuteAsync(
+            async (ct) =>
+            {
+                return await client.GetAsync(imageUrl, HttpCompletionOption.ResponseHeadersRead);
+            }, CancellationToken.None);
 
-        using var response = await client.GetAsync(imageUrl, HttpCompletionOption.ResponseHeadersRead);
         response.EnsureSuccessStatusCode();
 
         // Determine file extension based on content-type
