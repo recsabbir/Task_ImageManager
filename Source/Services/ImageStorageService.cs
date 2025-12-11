@@ -58,8 +58,7 @@ public class ImageStorageService : IImageStorageService
                 Message = "No image URLs supplied."
             };
 
-        //Status
-        
+        //Concurrent dictionary to keep individual task status
         var imageDownloadProcessTracker = 
             new ConcurrentDictionary<string, (DownloadProcessStatus Status, string MessageOrName)>(); 
 

@@ -1,3 +1,4 @@
+using ImageDownloader.Middleware;
 using ImageDownloader.Services;
 using ImageDownloader.Services.Contracts;
 
@@ -13,7 +14,9 @@ builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
+// Global exception handler
+app.UseMiddleware<GlobalExceptionHandlerMiddleware>();
+
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
